@@ -1,0 +1,54 @@
+{
+	"name": "n8n-nodes-carbonvoice",
+	"version": "0.1.0",
+	"description": "Carbon Voice integration for n8n. Talk, share, and do more with anyone, anywhere, anytime.",
+	"license": "MIT",
+	"homepage": "https://carbonvoice.app",
+	"keywords": [
+		"n8n-community-node-package",
+		"carbonvoice",
+		"carbon-voice",
+		"voice",
+		"messaging"
+	],
+	"author": {
+		"name": "Carbon Voice",
+		"email": "support@carbonvoice.app"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/carbon-voice/cv-n8n-node.git"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"release": "n8n-node release",
+		"prepublishOnly": "n8n-node prerelease"
+	},
+	"files": [
+		"dist"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": true,
+		"credentials": [
+			"dist/credentials/CarbonVoiceOAuth2Api.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/CarbonVoiceTrigger/CarbonVoiceTrigger.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "*",
+		"eslint": "9.39.4",
+		"prettier": "3.8.3",
+		"release-it": "20.0.1",
+		"typescript": "5.9.3"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}
