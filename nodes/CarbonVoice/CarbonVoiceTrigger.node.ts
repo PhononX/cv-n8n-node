@@ -8,9 +8,20 @@ import {
 	type IWebhookResponseData,
 } from 'n8n-workflow';
 
-import { getWorkspaces } from './shared/loadOptions';
+import {
+	getAIPrompts,
+	getContacts,
+	getConversations,
+	getLabels,
+	getVoiceMemoFolders,
+	getWorkspaces,
+} from './shared/loadOptions';
 import { carbonVoiceApiRequest } from './shared/transport';
-import { buildFiltersForEvent, triggerProperties } from './triggers/router';
+import {
+	buildFiltersForEvent,
+	subscriptionEventForCurrent,
+	triggerProperties,
+} from './triggers/router';
 
 export class CarbonVoiceTrigger implements INodeType {
 	description: INodeTypeDescription = {
@@ -43,6 +54,11 @@ export class CarbonVoiceTrigger implements INodeType {
 	methods = {
 		loadOptions: {
 			getWorkspaces,
+			getConversations,
+			getContacts,
+			getVoiceMemoFolders,
+			getLabels,
+			getAIPrompts,
 		},
 	};
 
@@ -55,7 +71,7 @@ export class CarbonVoiceTrigger implements INodeType {
 
 			async create(this: IHookFunctions): Promise<boolean> {
 				const webhookUrl = this.getNodeWebhookUrl('default');
-				const event = this.getNodeParameter('event') as string;
+				const subscriptionEvent = subscriptionEventForCurrent.call(this);
 
 				const subscription_filters = await buildFiltersForEvent.call(this);
 
@@ -64,7 +80,7 @@ export class CarbonVoiceTrigger implements INodeType {
 
 				const body: IDataObject = {
 					webhookURL: webhookUrl,
-					subscriptions: [event],
+					subscriptions: [subscriptionEvent],
 					subscription_filters,
 				};
 
