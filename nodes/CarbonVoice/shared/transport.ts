@@ -71,3 +71,30 @@ export async function getWhoAmI(
 	)) as WhoAmIResponse;
 	return response.user;
 }
+
+/**
+ * Multipart/form-data POST. Use when uploading binary files (e.g. audio for
+ * voice memos). Fields can be strings or { value: Buffer, options: { filename,
+ * contentType } } entries.
+ */
+export async function carbonVoiceFormDataRequest<T = IDataObject>(
+	this: CarbonVoiceRequestContext,
+	endpoint: string,
+	formData: IDataObject,
+): Promise<T> {
+	const options = {
+		method: 'POST' as IHttpRequestMethods,
+		url: `${BASE_API_URL}${endpoint}`,
+		formData,
+	};
+
+	try {
+		return (await this.helpers.httpRequestWithAuthentication.call(
+			this,
+			'carbonVoiceOAuth2Api',
+			options,
+		)) as T;
+	} catch (error) {
+		throw new NodeApiError(this.getNode(), error as JsonObject);
+	}
+}

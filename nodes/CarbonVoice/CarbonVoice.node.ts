@@ -9,8 +9,11 @@ import {
 
 import { actionProperties, executeAction } from './actions/router';
 import {
+	getAIPrompts,
 	getContacts,
 	getConversations,
+	getLabels,
+	getVoiceMemoFolders,
 	getWorkspaces,
 } from './shared/loadOptions';
 
@@ -40,6 +43,9 @@ export class CarbonVoice implements INodeType {
 			getWorkspaces,
 			getConversations,
 			getContacts,
+			getVoiceMemoFolders,
+			getLabels,
+			getAIPrompts,
 		},
 	};
 
