@@ -1,0 +1,18 @@
+{
+	"node": "n8n-nodes-carbonvoice.carbonVoice",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Communication", "Productivity"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://carbonvoice.app/docs/api/oauth"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/carbon-voice/cv-n8n-node?tab=readme-ov-file"
+			}
+		]
+	}
+}

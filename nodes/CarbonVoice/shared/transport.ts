@@ -1,4 +1,5 @@
 import type {
+	IExecuteFunctions,
 	IHookFunctions,
 	IWebhookFunctions,
 	ILoadOptionsFunctions,
@@ -10,8 +11,14 @@ import { NodeApiError } from 'n8n-workflow';
 
 import { BASE_API_URL } from './constants';
 
+export type CarbonVoiceRequestContext =
+	| IExecuteFunctions
+	| IHookFunctions
+	| IWebhookFunctions
+	| ILoadOptionsFunctions;
+
 export async function carbonVoiceApiRequest<T = IDataObject>(
-	this: IHookFunctions | IWebhookFunctions | ILoadOptionsFunctions,
+	this: CarbonVoiceRequestContext,
 	method: IHttpRequestMethods,
 	endpoint: string,
 	body: IDataObject = {},
@@ -49,8 +56,18 @@ export type WhoAmI = {
 	last_name?: string;
 };
 
+type WhoAmIResponse = {
+	success: boolean;
+	user: WhoAmI;
+};
+
 export async function getWhoAmI(
 	this: IHookFunctions | ILoadOptionsFunctions,
 ): Promise<WhoAmI> {
-	return (await carbonVoiceApiRequest.call(this, 'GET', '/whoami')) as WhoAmI;
+	const response = (await carbonVoiceApiRequest.call(
+		this,
+		'GET',
+		'/whoami',
+	)) as WhoAmIResponse;
+	return response.user;
 }

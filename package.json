@@ -38,7 +38,8 @@
 			"dist/credentials/CarbonVoiceOAuth2Api.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/CarbonVoiceTrigger/CarbonVoiceTrigger.node.js"
+			"dist/nodes/CarbonVoice/CarbonVoice.node.js",
+			"dist/nodes/CarbonVoice/CarbonVoiceTrigger.node.js"
 		]
 	},
 	"devDependencies": {

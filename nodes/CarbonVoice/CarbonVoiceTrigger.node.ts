@@ -10,6 +10,7 @@ import {
 } from 'n8n-workflow';
 
 import { Operator, type SubscriptionFilter } from './shared/constants';
+import { getWorkspaces } from './shared/loadOptions';
 import { carbonVoiceApiRequest, getWhoAmI } from './shared/transport';
 
 export class CarbonVoiceTrigger implements INodeType {
@@ -60,11 +61,14 @@ export class CarbonVoiceTrigger implements INodeType {
 				],
 			},
 			{
-				displayName: 'Workspace ID',
+				displayName: 'Workspace Name or ID',
 				name: 'workspaceId',
-				type: 'string',
+				type: 'options',
 				default: '',
-				description: 'Optional. Restrict to a single workspace.',
+				description: 'Restrict to a single workspace. Choose "All Workspaces" to receive events from everywhere. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				typeOptions: {
+					loadOptionsMethod: 'getWorkspaces',
+				},
 				displayOptions: {
 					show: {
 						event: ['message.posted.to.channel'],
@@ -72,6 +76,12 @@ export class CarbonVoiceTrigger implements INodeType {
 				},
 			},
 		],
+	};
+
+	methods = {
+		loadOptions: {
+			getWorkspaces,
+		},
 	};
 
 	webhookMethods = {
