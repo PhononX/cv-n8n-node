@@ -1,17 +1,16 @@
 import {
 	NodeConnectionTypes,
-	NodeOperationError,
+	type IDataObject,
 	type IHookFunctions,
 	type INodeType,
 	type INodeTypeDescription,
 	type IWebhookFunctions,
 	type IWebhookResponseData,
-	type IDataObject,
 } from 'n8n-workflow';
 
-import { Operator, type SubscriptionFilter } from './shared/constants';
 import { getWorkspaces } from './shared/loadOptions';
-import { carbonVoiceApiRequest, getWhoAmI } from './shared/transport';
+import { carbonVoiceApiRequest } from './shared/transport';
+import { buildFiltersForEvent, triggerProperties } from './triggers/router';
 
 export class CarbonVoiceTrigger implements INodeType {
 	description: INodeTypeDescription = {
@@ -25,18 +24,11 @@ export class CarbonVoiceTrigger implements INodeType {
 		version: 1,
 		subtitle: '={{$parameter["event"]}}',
 		description: 'Starts the workflow when a Carbon Voice event fires',
-		defaults: {
-			name: 'Carbon Voice Trigger',
-		},
+		defaults: { name: 'Carbon Voice Trigger' },
 		usableAsTool: true,
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
-		credentials: [
-			{
-				name: 'carbonVoiceOAuth2Api',
-				required: true,
-			},
-		],
+		credentials: [{ name: 'carbonVoiceOAuth2Api', required: true }],
 		webhooks: [
 			{
 				name: 'default',
@@ -45,37 +37,7 @@ export class CarbonVoiceTrigger implements INodeType {
 				path: 'webhook',
 			},
 		],
-		properties: [
-			{
-				displayName: 'Event',
-				name: 'event',
-				type: 'options',
-				required: true,
-				default: 'message.posted.to.channel',
-				options: [
-					{
-						name: 'New Message Received',
-						value: 'message.posted.to.channel',
-						description: 'Triggers when a new message is posted in any conversation (excludes your own messages)',
-					},
-				],
-			},
-			{
-				displayName: 'Workspace Name or ID',
-				name: 'workspaceId',
-				type: 'options',
-				default: '',
-				description: 'Restrict to a single workspace. Choose "All Workspaces" to receive events from everywhere. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-				typeOptions: {
-					loadOptionsMethod: 'getWorkspaces',
-				},
-				displayOptions: {
-					show: {
-						event: ['message.posted.to.channel'],
-					},
-				},
-			},
-		],
+		properties: triggerProperties,
 	};
 
 	methods = {
@@ -94,31 +56,8 @@ export class CarbonVoiceTrigger implements INodeType {
 			async create(this: IHookFunctions): Promise<boolean> {
 				const webhookUrl = this.getNodeWebhookUrl('default');
 				const event = this.getNodeParameter('event') as string;
-				const workspaceId = this.getNodeParameter('workspaceId', '') as string;
 
-				const me = await getWhoAmI.call(this);
-				if (!me?.user_guid) {
-					throw new NodeOperationError(
-						this.getNode(),
-						'Unable to resolve authenticated user — cannot subscribe.',
-					);
-				}
-
-				const subscription_filters: SubscriptionFilter[] = [
-					{
-						key: 'creator_id',
-						value: me.user_guid,
-						operator: Operator.NOT_EQUALS,
-					},
-				];
-
-				if (workspaceId) {
-					subscription_filters.push({
-						key: 'workspace_id',
-						value: workspaceId,
-						operator: Operator.EQUALS,
-					});
-				}
+				const subscription_filters = await buildFiltersForEvent.call(this);
 
 				const credentials = await this.getCredentials('carbonVoiceOAuth2Api');
 				const clientId = credentials.clientId as string;
