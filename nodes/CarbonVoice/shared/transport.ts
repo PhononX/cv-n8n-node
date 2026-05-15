@@ -42,7 +42,7 @@ export async function carbonVoiceApiRequest<T = IDataObject>(
 	try {
 		return (await this.helpers.httpRequestWithAuthentication.call(
 			this,
-			'carbonVoiceOAuth2Api',
+			'carbonVoiceApi',
 			options,
 		)) as T;
 	} catch (error) {
@@ -91,7 +91,7 @@ export async function carbonVoiceFormDataRequest<T = IDataObject>(
 	try {
 		return (await this.helpers.httpRequestWithAuthentication.call(
 			this,
-			'carbonVoiceOAuth2Api',
+			'carbonVoiceApi',
 			options,
 		)) as T;
 	} catch (error) {

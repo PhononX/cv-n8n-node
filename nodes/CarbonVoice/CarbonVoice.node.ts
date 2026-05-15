@@ -34,7 +34,7 @@ export class CarbonVoice implements INodeType {
 		usableAsTool: true,
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
-		credentials: [{ name: 'carbonVoiceOAuth2Api', required: true }],
+		credentials: [{ name: 'carbonVoiceApi', required: true }],
 		properties: actionProperties,
 	};
 

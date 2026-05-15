@@ -1,5 +1,6 @@
 import {
 	NodeConnectionTypes,
+	NodeOperationError,
 	type IDataObject,
 	type IHookFunctions,
 	type INodeType,
@@ -39,7 +40,7 @@ export class CarbonVoiceTrigger implements INodeType {
 		usableAsTool: true,
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
-		credentials: [{ name: 'carbonVoiceOAuth2Api', required: true }],
+		credentials: [{ name: 'carbonVoiceApi', required: true }],
 		webhooks: [
 			{
 				name: 'default',
@@ -72,11 +73,7 @@ export class CarbonVoiceTrigger implements INodeType {
 			async create(this: IHookFunctions): Promise<boolean> {
 				const webhookUrl = this.getNodeWebhookUrl('default');
 				const subscriptionEvent = subscriptionEventForCurrent.call(this);
-
 				const subscription_filters = await buildFiltersForEvent.call(this);
-
-				const credentials = await this.getCredentials('carbonVoiceOAuth2Api');
-				const clientId = credentials.clientId as string;
 
 				const body: IDataObject = {
 					webhookURL: webhookUrl,
@@ -87,18 +84,39 @@ export class CarbonVoiceTrigger implements INodeType {
 				const response = (await carbonVoiceApiRequest.call(
 					this,
 					'POST',
-					`/apps/${clientId}/subscribe`,
+					'/apps/subscribe',
 					body,
-				)) as { id?: string; data?: { id?: string } };
+				)) as IDataObject;
 
-				const subscriptionId = response?.id ?? response?.data?.id;
+				const subscriptionId =
+					(response?.id as string | undefined) ??
+					((response?.data as IDataObject | undefined)?.id as
+						| string
+						| undefined);
+
 				if (!subscriptionId) {
-					return false;
+					throw new NodeOperationError(
+						this.getNode(),
+						`Subscribe succeeded but response did not contain a subscription id. Response was: ${JSON.stringify(
+							response,
+						)}`,
+					);
 				}
+
+				// The subscribe response carries the client_id the backend bound
+				// this subscription to. We stash it so delete() can target the
+				// correct /apps/{client_id}/unsubscribe/{id} path later.
+				const clientIdFromResponse =
+					(response?.client_id as string | undefined) ??
+					((response?.data as IDataObject | undefined)?.client_id as
+						| string
+						| undefined);
 
 				const webhookData = this.getWorkflowStaticData('node');
 				webhookData.subscriptionId = subscriptionId;
-				webhookData.clientId = clientId;
+				if (clientIdFromResponse) {
+					webhookData.clientId = clientIdFromResponse;
+				}
 				return true;
 			},
 
@@ -108,6 +126,10 @@ export class CarbonVoiceTrigger implements INodeType {
 				const clientId = webhookData.clientId as string | undefined;
 
 				if (!subscriptionId || !clientId) {
+					// Nothing registered, or we never captured the client_id —
+					// nothing safe to delete.
+					delete webhookData.subscriptionId;
+					delete webhookData.clientId;
 					return true;
 				}
 
