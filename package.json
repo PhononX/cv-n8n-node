@@ -3,21 +3,29 @@
 	"version": "0.1.0",
 	"description": "Carbon Voice integration for n8n. Talk, share, and do more with anyone, anywhere, anytime.",
 	"license": "MIT",
-	"homepage": "https://carbonvoice.app",
+	"homepage": "https://github.com/PhononX/cv-n8n-node#readme",
 	"keywords": [
 		"n8n-community-node-package",
+		"n8n",
 		"carbonvoice",
 		"carbon-voice",
 		"voice",
-		"messaging"
+		"messaging",
+		"voice-memo",
+		"webhook",
+		"trigger"
 	],
 	"author": {
 		"name": "Carbon Voice",
-		"email": "support@carbonvoice.app"
+		"email": "support@carbonvoice.app",
+		"url": "https://carbonvoice.app"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/carbon-voice/cv-n8n-node.git"
+		"url": "git+https://github.com/PhononX/cv-n8n-node.git"
+	},
+	"bugs": {
+		"url": "https://github.com/PhononX/cv-n8n-node/issues"
 	},
 	"scripts": {
 		"build": "n8n-node build",

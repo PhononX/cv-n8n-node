@@ -1,180 +1,202 @@
 # Carbon Voice — n8n Community Node (Implementation Plan)
 
-> Companion to `plan.md` — that doc captures the original generic n8n development guide. This doc captures the **actual implementation decisions** for `n8n-nodes-carbonvoice`, derived from auditing `cv-zapier` and the Carbon Voice webhook backend.
+> Companion to `plan.md` — that doc captures the original generic n8n development guide. This doc captures the **actual implementation decisions** for `n8n-nodes-carbonvoice`, derived from auditing `cv-zapier` and validating end-to-end against the Carbon Voice public API.
 
 ---
 
 ## Goal
 
-Build a published n8n community node package (`n8n-nodes-carbonvoice`) that gives n8n users the same surface area Carbon Voice already exposes through its Zapier integration: webhook-driven triggers + action nodes for messaging, voice memos, action items, AI prompts, and labels.
+Ship a published n8n community node package (`n8n-nodes-carbonvoice`) that gives n8n users the same surface area Carbon Voice already exposes through its Zapier integration: webhook-driven triggers + action nodes for messaging, voice memos, action items, AI prompts, and labels.
 
-End state: a user installs the package via **Settings → Community Nodes**, connects with Carbon Voice OAuth2, and drags `Carbon Voice Trigger` or `Carbon Voice` action nodes into workflows.
-
----
-
-## Design decisions (and why they differ from `plan.md`)
-
-| Decision | Original `plan.md` | This plan | Why changed |
-|---|---|---|---|
-| Auth | PAT (Bearer token) | **OAuth2** | The webhook subscribe endpoint is scoped to an OAuth app (`POST /apps/{client_id}/subscribe`). PAT alone cannot subscribe — OAuth2 is required to use webhook triggers. |
-| Trigger style | Polling every 60s | **Webhook subscriptions** | The Carbon Voice backend already has a subscribe/unsubscribe webhook system (powers the in-app Webhook Setup UI and Zapier). Polling would duplicate that and add 60s lag. |
-| Coverage scope | 2 triggers + 3 actions | **10 triggers + 10 actions** | Parity with `cv-zapier`. |
-| Package name | `n8n-nodes-myapp` (placeholder) | `n8n-nodes-carbonvoice` | npm naming convention for n8n community nodes. |
+End state: a user installs the package via **Settings → Community Nodes**, connects with a Personal Access Token, and drags `Carbon Voice Trigger` or `Carbon Voice` action nodes into workflows.
 
 ---
 
-## Prerequisite — Backend coordination
+## Design decisions (and the path we took to land on them)
 
-Before this node can ship, the Carbon Voice backend team needs to **provision an OAuth app for n8n** (analogous to the Zapier app):
-
-- `CLIENT_ID` + `CLIENT_SECRET` registered against `https://api.carbonvoice.app`
-- Redirect URI matching n8n's OAuth callback: `https://<n8n-host>/rest/oauth2-credential/callback` (n8n's standard OAuth2 callback path; users plug their own n8n host into the n8n credential UI)
-- The OAuth app must be allowed to call `/apps/{client_id}/subscribe` and `/apps/{client_id}/unsubscribe`
-
-If we publish this as a public community node, we either:
-- **Ship a shared "Carbon Voice n8n" app** (users use shared keys, easier UX) — recommended.
-- Or document how each customer registers their own OAuth app (more setup, more isolation).
-
-**Open asks for the backend team:**
-1. Confirm `webhookURL` passed to `/subscribe` accepts arbitrary URLs (n8n is often self-hosted, so URLs are not under our control).
-2. Confirm whether incoming POSTs from the webhook system are signed, and how to verify the signature inside `webhook()`.
+| Decision | Final choice | Notes |
+|---|---|---|
+| Auth | **Personal Access Token (PAT)** as a `Bearer` header | Originally targeted OAuth2 for parity with `cv-zapier`, but the public `/apps/subscribe` endpoint rejects external OAuth-app tokens with a `client_id from request is different from the authorization token` error (the implicit endpoint requires the token's `client_id` to match the user's default client). PATs are user-scoped (no `client_id` in the token) so they pass the check and the backend delivers events. Bonus: simpler UX — one field instead of an OAuth dance, no per-user OAuth-app registration. |
+| Trigger style | **Webhook subscriptions** via `POST /apps/subscribe` | Reuses the same backend that powers the in-app Webhook Setup UI. No 60-second polling lag, no wasted API calls, server-side filtering via `subscription_filters`. |
+| Coverage | **10 triggers + 10 actions**, matching `cv-zapier` | One-for-one parity. |
+| Architecture | **One file per operation / event** | Adding the next action is one new file + one line in a router. Mirrors `cv-zapier/src/creates/*` and `cv-zapier/src/triggers/*` so porting is mechanical. |
+| Package name | `n8n-nodes-carbonvoice` | Unscoped — convention for n8n community node packages. |
 
 ---
 
-## Current state — what's already scaffolded
+## Current state — what's scaffolded
 
-The repo is bootstrapped from `n8n-io/n8n-nodes-starter` and one reference webhook trigger is implemented end-to-end. Build + lint are clean.
+The repo is bootstrapped from `n8n-io/n8n-nodes-starter`. Build + lint are clean. End-to-end flows verified against the real Carbon Voice API:
+
+- ✅ Authentication via PAT
+- ✅ Subscribe / unsubscribe lifecycle
+- ✅ Webhook delivery into n8n (both Test mode and Published)
+- ✅ Action node — Send Message + Send Direct Message tested live, the remaining eight ported from `cv-zapier`
 
 ```
 cv-n8n-node/
 ├── credentials/
-│   └── CarbonVoiceOAuth2Api.credentials.ts    # OAuth2 credential (extends 'oAuth2Api')
+│   └── CarbonVoiceApi.credentials.ts      # PAT credential (Bearer header, /whoami test)
 ├── icons/
-│   ├── carbonvoice.svg                        # Light-mode icon
-│   └── carbonvoice.dark.svg                   # Dark-mode icon
+│   ├── carbonvoice.svg                    # Light-mode icon
+│   └── carbonvoice.dark.svg               # Dark-mode icon
 ├── nodes/
-│   └── CarbonVoiceTrigger/
-│       ├── CarbonVoiceTrigger.node.ts         # Trigger node (webhook subscribe/unsubscribe)
-│       ├── CarbonVoiceTrigger.node.json       # n8n marketplace metadata
+│   └── CarbonVoice/
+│       ├── CarbonVoice.node.ts            # Action node (thin class + dispatcher)
+│       ├── CarbonVoiceTrigger.node.ts     # Trigger node (webhook subscribe/unsubscribe)
+│       ├── CarbonVoice.node.json          # n8n marketplace metadata
+│       ├── CarbonVoiceTrigger.node.json
+│       ├── actions/
+│       │   ├── router.ts                  # Resource + Operation dispatch
+│       │   ├── conversation/
+│       │   │   ├── sendMessage.operation.ts
+│       │   │   ├── sendDirectMessage.operation.ts
+│       │   │   └── addUsers.operation.ts
+│       │   ├── message/
+│       │   │   ├── addLinkAttachments.operation.ts
+│       │   │   ├── removeLabel.operation.ts
+│       │   │   └── createShareLink.operation.ts
+│       │   ├── voiceMemo/
+│       │   │   └── create.operation.ts    # text-to-voice + audio binary upload
+│       │   ├── actionItem/
+│       │   │   ├── create.operation.ts
+│       │   │   └── update.operation.ts
+│       │   └── aiPrompt/
+│       │       └── createResponse.operation.ts
+│       ├── triggers/
+│       │   ├── router.ts                  # Event dispatch + properties aggregation
+│       │   ├── _actionItemFilters.ts      # Shared filter properties for the 4 AI events
+│       │   ├── messagePostedToChannel.event.ts
+│       │   ├── messageVoicememoCreated.event.ts
+│       │   ├── messagePostedToConversation.event.ts
+│       │   ├── labelAddedToMessage.event.ts
+│       │   ├── aiResponseGenerated.event.ts
+│       │   ├── aiSystemResponseGenerated.event.ts
+│       │   ├── actionItemCreated.event.ts
+│       │   ├── actionItemUpdated.event.ts
+│       │   ├── actionItemDeleted.event.ts
+│       │   └── actionItemStatusChanged.event.ts
 │       └── shared/
-│           ├── constants.ts                   # BASE_API_URL, SubscriptionEvents, Operator
-│           └── transport.ts                   # carbonVoiceApiRequest, getWhoAmI
-├── package.json                               # n8n-nodes-carbonvoice
+│           ├── constants.ts               # BASE_API_URL, event names, operators
+│           ├── transport.ts               # carbonVoiceApiRequest, carbonVoiceFormDataRequest, getWhoAmI
+│           └── loadOptions.ts             # workspaces, conversations, contacts, folders, labels, prompts
+├── package.json
 ├── tsconfig.json
 ├── eslint.config.mjs
-├── plan.md                                    # original development guide
-└── implementation-plan.md                     # this file
+├── README.md                              # public-facing — appears on the n8n marketplace
+├── plan.md                                # original generic guide
+└── implementation-plan.md                 # this file
 ```
-
-The reference trigger currently supports **one event** (`message.posted.to.channel` — "New Message Received"). The trigger node is structured so adding the remaining 9 events is just appending entries to the `Event` options list and (where applicable) adding event-specific filter fields gated by `displayOptions`.
 
 ---
 
 ## Architecture
 
-### Single trigger node, many events
+### Single node per role, many operations / events
 
-Rather than one node per event (10 separate nodes cluttering the n8n sidebar), we use **one `Carbon Voice Trigger` node** with an `Event` dropdown. This matches how Slack, Telegram, and most modern n8n triggers are structured.
+- **Action node** (`Carbon Voice`) has a Resource dropdown (Conversation, Message, Voice Memo, Action Item, AI Prompt) and an Operation dropdown gated by resource. Operations are individual files with their own `description` (properties) and `execute` function; the router flattens them all into one properties array and dispatches at execute time.
+- **Trigger node** (`Carbon Voice Trigger`) has an Event dropdown that surfaces all 10 events. Each event file exports `EVENT_VALUE`, an option entry, its filter properties, and a `buildFilters` function. The router flattens, dispatches, and surfaces them as one webhook node.
 
-```typescript
-properties: [
-  { displayName: 'Event', name: 'event', type: 'options', options: [/* 10 events */] },
-  // Event-specific filter fields gated by displayOptions.show.event
-]
-```
+Adding the eleventh trigger event or eleventh operation = drop one file in the right subfolder, append one line to the router. The main node classes stay thin.
 
 ### Webhook subscription lifecycle
 
-n8n's `webhookMethods.default` hooks map cleanly to Carbon Voice's subscribe/unsubscribe endpoints:
+`webhookMethods.default` on the trigger node maps to three Carbon Voice endpoints:
 
 | n8n hook | Carbon Voice call | When |
 |---|---|---|
-| `checkExists` | (state check on `workflowStaticData`) | Before activation, to detect already-subscribed |
-| `create` | `POST /apps/{client_id}/subscribe` | On workflow activation. Stores returned `subscriptionId`. |
-| `delete` | `DELETE /apps/{client_id}/unsubscribe/{id}` | On workflow deactivation. |
-| `webhook` | (no Carbon Voice call) | When Carbon Voice POSTs to the n8n URL. Emits payload. |
+| `checkExists` | (state lookup on `workflowStaticData`) | Before activation, to detect already-subscribed state |
+| `create` | `POST /apps/subscribe` | On workflow activation / test. Stores both the returned `subscriptionId` and the `client_id` the backend bound the subscription to. |
+| `delete` | `DELETE /apps/{client_id}/unsubscribe/{id}` | On workflow deactivation / test teardown |
+| `webhook` | (no Carbon Voice call) | Fires when Carbon Voice POSTs to the n8n URL. Emits the payload as the trigger output. |
 
-The subscribe call carries `subscription_filters` (server-side filtering) so n8n never receives events that don't match the user's criteria. This is strictly better than polling-then-filtering.
+The subscribe call carries `subscription_filters` (server-side filtering) so n8n never receives events that don't match.
 
-### Action nodes (not yet scaffolded)
+### Filter shape — the bit that took several iterations to land
 
-Actions go in a sibling node directory `nodes/CarbonVoice/` (the "doing" node, vs `CarbonVoiceTrigger/` the "listening" node). Single node with `Resource` + `Operation` dropdowns, matching the GitHub pattern from the starter.
+The public subscribe endpoint validates filters strictly:
 
----
+- **`eq` / `ne` operators** — `value` must be a **single string or number**.
+- **`in` operator** — `value` must be an **array of strings**.
+- **Recognized keys** (per backend validator):
+  - `creator_id` (singular) — single value with `eq` or `ne`
+  - `workspace_ids` (plural) — array with `in`
+  - `channel_ids` (plural) — array with `in`
+  - `folder_ids` (plural) — array with `in`
+  - `container_type`, `container_id`, `assigned_to`, `status` etc. for action-item events — single value with `eq`
 
-## Trigger coverage (10 events — parity with Zapier)
-
-All triggers use the same `webhookMethods.default` shape. They differ only in:
-- The event string passed in `subscriptions: [...]`
-- The optional filter fields exposed in node properties
-- The fetch-full-resource call done in `webhook()` (some events deliver just an ID; we fetch the full object before emitting)
-
-| n8n Event option | Subscription event | Filter fields | Notes |
-|---|---|---|---|
-| New Message Received | `message.posted.to.channel` | `Workspace ID` (optional); server-side filter `creator_id != me` | ✅ Implemented in current scaffold |
-| New Voice Memo Posted | `message.voicememo.created` | `Workspace ID`, `Folder ID` | Mirrors Zapier `MessageVoicememoCreatedTrigger` |
-| Message Posted to Conversation | `message.posted.to.channel` | `Conversation ID` | Different filter from "received" — includes own messages, scoped to one conversation |
-| Label Added to Message | `message.label.added` | `Workspace ID`, `Label ID` | Mirrors Zapier `LabelAddedToMessageTrigger` |
-| AI Response Generated | `ai.prompt.response.generated` | `Prompt ID` | Mirrors Zapier `AiResponseGeneratedTrigger` |
-| AI System Response Generated | `ai.prompt.response.generated` | `Prompt ID` ∈ (curated system prompts) | Same event, narrower filter |
-| Action Item Created | `action-item.created` | `Workspace ID`, `Assigned To` | Factory-style in Zapier (`createActionItemTrigger`) |
-| Action Item Updated | `action-item.updated` | `Workspace ID`, `Assigned To` | |
-| Action Item Deleted | `action-item.deleted` | `Workspace ID` | |
-| Action Item Status Changed | `action-item.status.changed` | `Workspace ID`, `New Status` | |
-
-After the n8n webhook fires, some events benefit from a follow-up `GET /messages/{id}` to enrich the payload (conversation, creator, labels). Mirror this from `cv-zapier/src/triggers/*.trigger.ts` — the `perform` function in each Zapier trigger is the equivalent enrichment step.
+Sending a singular key (`workspace_id`) or a plural key with `eq`+single-value returns 400. The trigger event files in this repo are aligned to those rules.
 
 ---
 
-## Action coverage (10 operations — parity with Zapier)
+## Trigger coverage (10 events, all wired)
 
-All actions live in **one** `Carbon Voice` action node with a `Resource` + `Operation` dropdown.
+| n8n Event option | Wire-level subscription event | Filter fields |
+|---|---|---|
+| New Message Received | `message.posted.to.channel` | `workspace_ids` (optional); server-side `creator_id != me` to suppress self-loops |
+| New Voice Memo Posted | `message.voicememo.created` | `workspace_ids`, `folder_ids` |
+| Message Posted to Conversation | `message.posted.to.channel` | `channel_ids` (required) |
+| Label Added to Message | `message.label.added` | Label ID (required, single-value) |
+| AI Response Generated | `ai.prompt.response.generated` | Prompt ID (required) |
+| AI System Response Generated | `ai.prompt.response.generated` | System prompt ID (required, narrower filter via `system_prompt_id`) |
+| Action Item Created | `action-item.created` | `workspace_ids`, container_type / container_id, `assigned_to`, `creator_id` |
+| Action Item Updated | `action-item.updated` | same as Created |
+| Action Item Deleted | `action-item.deleted` | same as Created |
+| Action Item Status Changed | `action-item.status.changed` | same as Created + `status` |
 
-| Resource | Operation | HTTP | n8n shape |
-|---|---|---|---|
-| Conversation | Send Message | `POST /conversations/{id}/messages` | `execute()` writes text + attachments |
-| Conversation | Send Direct Message (to a user) | `POST /conversations/direct` → `POST /conversations/{id}/messages` | Two-step: open DM, then post |
-| Conversation | Add Users | `POST /conversations/{id}/users` | Multi-select user picker |
-| Message | Add Link Attachments | `PATCH /messages/{id}` | Append links to existing message |
-| Message | Remove Label | `DELETE /messages/{id}/labels/{labelId}` | |
-| Message | Create Share Link | `POST /messages/{id}/share` | |
-| Voice Memo | Post (text-to-voice) | `POST /workspaces/{ws}/folders/{f}/messages` | Body type=voicememo |
-| Voice Memo | Post (audio upload) | `POST /workspaces/{ws}/folders/{f}/voicememos` | Multipart binary upload |
-| AI Prompt | Create Response | `POST /ai/prompts/{id}/responses` | |
-| Action Item | Create | `POST /action-items` | |
-| Action Item | Update | `PATCH /action-items/{id}` | |
+Two events (`Message Posted to Conversation`, `AI System Response Generated`) ride the same wire-level subscription string as another event but use a narrower filter — the router handles this via `SUBSCRIPTION_EVENT_OVERRIDE` on those modules.
 
-Action implementations port directly from `cv-zapier/src/creates/*.create.ts`. The shape of inputs (workspace/folder/user dropdowns, attachments fixedCollection) translates cleanly from Zapier `inputFields` → n8n `properties` with the same dynamic loading.
+---
+
+## Action coverage (10 operations, all wired)
+
+| Resource | Operation | HTTP |
+|---|---|---|
+| Conversation | Send Message | `POST /simplified/messages/conversation/{id}` |
+| Conversation | Send Direct Message | `POST /simplified/messages/direct` |
+| Conversation | Add Users | `POST /simplified/conversations/{id}/users` |
+| Message | Add Link Attachments | `POST /simplified/messages/{id}/attachments/bulk/link` |
+| Message | Remove Label | `DELETE /labels/{labelId}/message/{workspaceId}/{messageId}` |
+| Message | Create Share Link | `POST /simplified/message-sharelinks` |
+| Voice Memo | Create (text or audio) | `POST /simplified/messages/voicememo` — JSON when text, multipart when binary audio |
+| Action Item | Create | `POST /action-items` |
+| Action Item | Update | `PUT /action-items/{id}` (fields) + `PATCH /action-items/{id}/status` (status, if provided) |
+| AI Prompt | Create Response | `POST /responses` |
+
+Action implementations port directly from `cv-zapier/src/creates/*.create.ts`. Dynamic dropdowns translate cleanly from Zapier `dynamic` fields to n8n `loadOptionsMethod`.
 
 ---
 
 ## Shared layer
 
-| File | Purpose | Maps to Zapier |
+| File | Purpose | Maps to in `cv-zapier` |
 |---|---|---|
-| `nodes/CarbonVoiceTrigger/shared/transport.ts` | `carbonVoiceApiRequest`, `getWhoAmI` | `cv-zapier/src/helpers/` |
-| `nodes/CarbonVoiceTrigger/shared/constants.ts` | URLs, event names, operators | `cv-zapier/src/constants.ts` + `cv-zapier/src/entities.ts` |
-| `nodes/CarbonVoice/shared/loadOptions.ts` *(to add)* | `getWorkspaces`, `getWorkspaceUsers`, `getFolders`, `getConversations`, `getLabels`, `getPrompts` | `cv-zapier/src/resources/*.resource.ts` |
-| `nodes/CarbonVoice/shared/resolveAttachments.ts` *(to add)* | Build attachments array from link defs + binary uploads | `cv-zapier/src/creates/add-link-attachments-to-message.create.ts` + similar |
-
-The two shared folders are **separate** rather than hoisted to a top-level `shared/` because the n8n-nodes-starter convention puts shared code under each node folder. If duplication grows we'll hoist later.
+| `shared/transport.ts` | `carbonVoiceApiRequest` (JSON), `carbonVoiceFormDataRequest` (multipart upload), `getWhoAmI` | `cv-zapier/src/helpers/` |
+| `shared/constants.ts` | `BASE_API_URL`, event names, operator enum, filter typedef | `cv-zapier/src/constants.ts` + `cv-zapier/src/entities.ts` |
+| `shared/loadOptions.ts` | `getWorkspaces`, `getConversations` (filtered by workspace), `getContacts`, `getVoiceMemoFolders`, `getPrerecordedFolders`, `getLabels`, `getAIPrompts` | `cv-zapier/src/resources/*.resource.ts` |
 
 ---
 
-## Building locally
+## Building / testing locally
 
 ```bash
+# Install
+npm install
+
 # Build
 npm run build
 
 # Lint
 npm run lint
 
-# Dev mode — links into a local n8n install and watches
+# Dev mode — links into a local n8n install and watches for changes
 npm run dev
+
+# Dev mode with public webhook delivery — point n8n at an ngrok tunnel
+WEBHOOK_URL=https://your-subdomain.ngrok-free.dev npm run dev
 ```
 
-The starter ships with `@n8n/node-cli`, which handles the link-into-`~/.n8n`-and-watch dance internally. No manual `npm link` needed.
+`@n8n/node-cli dev` handles the link-into-`~/.n8n`-and-watch dance internally. Subscription webhooks need a public URL so they can be reached from Carbon Voice — use ngrok (free static domain is enough).
 
 ---
 
@@ -184,21 +206,22 @@ The starter ships with `@n8n/node-cli`, which handles the link-into-`~/.n8n`-and
 npm run release
 ```
 
-`@n8n/node-cli release` runs lint + build + npm publish. After publish, the node appears under **Settings → Community Nodes** for any n8n instance that installs `n8n-nodes-carbonvoice`.
+`@n8n/node-cli release` runs lint + build + `npm publish`. After publish, the node appears under **Settings → Community Nodes** for any n8n instance that installs `n8n-nodes-carbonvoice`.
+
+For pre-publish dry-runs:
+
+```bash
+npm pack --dry-run
+```
 
 ---
 
-## Next steps (in order)
+## Open items (post-`0.1.0`)
 
-1. **Backend coordination** *(in progress — user is getting CLIENT_ID/CLIENT_SECRET)*:
-   - Provision the n8n OAuth app, get `CLIENT_ID`/`CLIENT_SECRET`.
-   - Confirm `webhookURL` accepts arbitrary URLs (for self-hosted n8n).
-   - Confirm whether webhook POSTs are signed (and how to verify).
-2. **Wire up the remaining 9 trigger events** — append to the `Event` options list in `CarbonVoiceTrigger.node.ts`, add per-event filter fields gated by `displayOptions`. Port enrichment calls from each `cv-zapier/src/triggers/*.trigger.ts`.
-3. **Scaffold the action node** at `nodes/CarbonVoice/CarbonVoice.node.ts` — single node, `Resource` + `Operation` dropdowns, port all 10 creates from `cv-zapier/src/creates/`.
-4. **Add `loadOptions` methods** — `getWorkspaces`, `getWorkspaceUsers`, `getFolders`, `getConversations`, `getLabels`, `getPrompts` — so dropdowns are dynamic, matching Zapier `dynamic` fields.
-5. **Manual test** — register a test workflow against staging, verify subscribe/unsubscribe lifecycle, verify each event fires with the right payload shape.
-6. **Publish a `0.1.0-beta`** to npm under a scoped name first, install in a real n8n instance, dogfood for one week, then promote to `0.1.0`.
+1. **Submit to the n8n verified community marketplace** — optional, gets a badge and better discoverability. Process: <https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/>
+2. **Add example workflow JSON exports** in the repo so users can import a starting workflow with one click.
+3. **Verify the four Action Item triggers** end-to-end (the singular filter keys for `container_type` / `container_id` / `assigned_to` / `status` may still need plural/operator adjustments — the AI prompt and label triggers may have similar issues).
+4. **Add webhook payload signature verification** in `webhook()` if/when Carbon Voice signs outgoing webhooks.
 
 ---
 
@@ -209,5 +232,6 @@ The Zapier integration at `/Users/cristian/Documents/Development/carbon_voice/cv
 - Triggers: `cv-zapier/src/triggers/*.trigger.ts`
 - Creates → actions: `cv-zapier/src/creates/*.create.ts`
 - Resources → loadOptions: `cv-zapier/src/resources/*.resource.ts`
-- Models/types: `cv-zapier/src/models/simplified-api.ts` (generated from OpenAPI)
-- Sample payloads: `cv-zapier/src/samples/`
+- Models / payload types: `cv-zapier/src/models/simplified-api.ts` (generated from OpenAPI)
+- Webhook payload schemas: <https://github.com/PhononX/cv-contracts/tree/main/src/schemas/webhook>
+- Subscribe / webhook docs: <https://www.developer.carbonvoice.app/how-to/how-to-register-for-webhooks>
