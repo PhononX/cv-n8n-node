@@ -1,7 +1,7 @@
-# n8n-nodes-carbonvoice
+# @carbonvoice/n8n-nodes-carbonvoice
 
-[![npm version](https://img.shields.io/npm/v/n8n-nodes-carbonvoice.svg)](https://www.npmjs.com/package/n8n-nodes-carbonvoice)
-[![license](https://img.shields.io/npm/l/n8n-nodes-carbonvoice.svg)](https://github.com/PhononX/cv-n8n-node/blob/main/LICENSE.md)
+[![npm version](https://img.shields.io/npm/v/@carbonvoice/n8n-nodes-carbonvoice.svg)](https://www.npmjs.com/package/@carbonvoice/n8n-nodes-carbonvoice)
+[![license](https://img.shields.io/npm/l/@carbonvoice/n8n-nodes-carbonvoice.svg)](https://github.com/PhononX/cv-n8n-node/blob/main/LICENSE.md)
 
 Official [Carbon Voice](https://carbonvoice.app) community node for [n8n](https://n8n.io). Send messages, post voice memos, manage action items, run AI prompts, and react to events across your Carbon Voice workspaces — all from your n8n workflows.
 
@@ -57,7 +57,7 @@ Dynamic dropdowns power the workspace, conversation, user, folder, label and AI 
 
 1. Open **Settings → Community Nodes**.
 2. Click **Install**.
-3. Paste `n8n-nodes-carbonvoice` and confirm.
+3. Paste `@carbonvoice/n8n-nodes-carbonvoice` and confirm.
 
 After the package installs, restart n8n. Both `Carbon Voice` and `Carbon Voice Trigger` appear in the node picker.
 

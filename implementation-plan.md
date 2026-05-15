@@ -1,12 +1,12 @@
 # Carbon Voice — n8n Community Node (Implementation Plan)
 
-> Companion to `plan.md` — that doc captures the original generic n8n development guide. This doc captures the **actual implementation decisions** for `n8n-nodes-carbonvoice`, derived from auditing `cv-zapier` and validating end-to-end against the Carbon Voice public API.
+> Companion to `plan.md` — that doc captures the original generic n8n development guide. This doc captures the **actual implementation decisions** for `@carbonvoice/n8n-nodes-carbonvoice`, derived from auditing `cv-zapier` and validating end-to-end against the Carbon Voice public API.
 
 ---
 
 ## Goal
 
-Ship a published n8n community node package (`n8n-nodes-carbonvoice`) that gives n8n users the same surface area Carbon Voice already exposes through its Zapier integration: webhook-driven triggers + action nodes for messaging, voice memos, action items, AI prompts, and labels.
+Ship a published n8n community node package (`@carbonvoice/n8n-nodes-carbonvoice`) that gives n8n users the same surface area Carbon Voice already exposes through its Zapier integration: webhook-driven triggers + action nodes for messaging, voice memos, action items, AI prompts, and labels.
 
 End state: a user installs the package via **Settings → Community Nodes**, connects with a Personal Access Token, and drags `Carbon Voice Trigger` or `Carbon Voice` action nodes into workflows.
 
@@ -20,7 +20,7 @@ End state: a user installs the package via **Settings → Community Nodes**, con
 | Trigger style | **Webhook subscriptions** via `POST /apps/subscribe` | Reuses the same backend that powers the in-app Webhook Setup UI. No 60-second polling lag, no wasted API calls, server-side filtering via `subscription_filters`. |
 | Coverage | **10 triggers + 10 actions**, matching `cv-zapier` | One-for-one parity. |
 | Architecture | **One file per operation / event** | Adding the next action is one new file + one line in a router. Mirrors `cv-zapier/src/creates/*` and `cv-zapier/src/triggers/*` so porting is mechanical. |
-| Package name | `n8n-nodes-carbonvoice` | Unscoped — convention for n8n community node packages. |
+| Package name | `@carbonvoice/n8n-nodes-carbonvoice` | Unscoped — convention for n8n community node packages. |
 
 ---
 
@@ -206,7 +206,7 @@ WEBHOOK_URL=https://your-subdomain.ngrok-free.dev npm run dev
 npm run release
 ```
 
-`@n8n/node-cli release` runs lint + build + `npm publish`. After publish, the node appears under **Settings → Community Nodes** for any n8n instance that installs `n8n-nodes-carbonvoice`.
+`@n8n/node-cli release` runs lint + build + `npm publish`. After publish, the node appears under **Settings → Community Nodes** for any n8n instance that installs `@carbonvoice/n8n-nodes-carbonvoice`.
 
 For pre-publish dry-runs:
 

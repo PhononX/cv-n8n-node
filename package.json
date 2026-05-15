@@ -1,6 +1,9 @@
 {
-	"name": "n8n-nodes-carbonvoice",
+	"name": "@carbonvoice/n8n-nodes-carbonvoice",
 	"version": "0.1.0",
+	"publishConfig": {
+		"access": "public"
+	},
 	"description": "Carbon Voice integration for n8n. Talk, share, and do more with anyone, anywhere, anytime.",
 	"license": "MIT",
 	"homepage": "https://github.com/PhononX/cv-n8n-node#readme",
