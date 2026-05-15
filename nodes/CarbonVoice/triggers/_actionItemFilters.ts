@@ -116,9 +116,9 @@ export async function buildActionItemFilters(
 	const workspaceId = this.getNodeParameter('workspaceId', '') as string;
 	if (workspaceId) {
 		filters.push({
-			key: 'workspace_id',
-			value: workspaceId,
-			operator: Operator.EQUALS,
+			key: 'workspace_ids',
+			value: [workspaceId],
+			operator: Operator.IN,
 		});
 	}
 

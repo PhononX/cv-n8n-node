@@ -44,16 +44,16 @@ export async function buildFilters(
 	const workspaceId = this.getNodeParameter('workspaceId', '') as string;
 	if (workspaceId) {
 		filters.push({
-			key: 'workspace_id',
-			value: workspaceId,
-			operator: Operator.EQUALS,
+			key: 'workspace_ids',
+			value: [workspaceId],
+			operator: Operator.IN,
 		});
 	}
 
 	const folderIds = this.getNodeParameter('folderIds', []) as string[];
 	if (folderIds.length) {
 		filters.push({
-			key: 'folder_id',
+			key: 'folder_ids',
 			value: folderIds,
 			operator: Operator.IN,
 		});

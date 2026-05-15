@@ -51,12 +51,13 @@ export async function buildFilters(
 	}
 
 	// Backend uses the underlying "message.posted.to.channel" event but
-	// scopes to a single conversation via the _id filter on the channel.
+	// scopes via the channel_ids filter. Plural keys require the `in`
+	// operator with an array of IDs.
 	return [
 		{
-			key: '_id',
-			value: conversationId,
-			operator: Operator.EQUALS,
+			key: 'channel_ids',
+			value: [conversationId],
+			operator: Operator.IN,
 		},
 	];
 }
