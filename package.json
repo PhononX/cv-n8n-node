@@ -41,7 +41,7 @@
 	},
 	"files": [
 		"dist",
-		"LICENSE.md"
+		"LICENSE"
 	],
 	"n8n": {
 		"n8nNodesApiVersion": 1,
