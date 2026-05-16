@@ -140,3 +140,4 @@ Issues and PRs welcome: [github.com/PhononX/cv-n8n-node](https://github.com/Phon
 ## License
 
 [MIT](./LICENSE.md) © Carbon Voice
+# Published via GitHub Actions with npm provenance
