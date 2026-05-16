@@ -225,13 +225,6 @@ npm pack --dry-run
 
 ---
 
-## Reference: source mapping
+## Reference
 
-The Zapier integration at `/Users/cristian/Documents/Development/carbon_voice/cv-zapier` is the source of truth for behavior. When porting any trigger or action, find the matching file in:
-
-- Triggers: `cv-zapier/src/triggers/*.trigger.ts`
-- Creates → actions: `cv-zapier/src/creates/*.create.ts`
-- Resources → loadOptions: `cv-zapier/src/resources/*.resource.ts`
-- Models / payload types: `cv-zapier/src/models/simplified-api.ts` (generated from OpenAPI)
-- Webhook payload schemas: <https://github.com/PhononX/cv-contracts/tree/main/src/schemas/webhook>
-- Subscribe / webhook docs: <https://www.developer.carbonvoice.app/how-to/how-to-register-for-webhooks>
+The `cv-zapier` repo is a useful reference for how triggers and actions are implemented. New operations in this node can be modeled after their Zapier equivalents.
