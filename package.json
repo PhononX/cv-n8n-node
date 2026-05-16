@@ -4,7 +4,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"description": "Carbon Voice integration for n8n. Talk, share, and do more with anyone, anywhere, anytime.",
+	"description": "Work with Carbon Voice in n8n. Trigger on new messages, voice memos, and more. Send messages, manage conversations, and more.",
 	"license": "MIT",
 	"homepage": "https://github.com/PhononX/cv-n8n-node#readme",
 	"keywords": [
@@ -21,7 +21,7 @@
 	"author": {
 		"name": "Carbon Voice",
 		"email": "support@carbonvoice.app",
-		"url": "https://carbonvoice.app"
+		"url": "https://getcarbon.app"
 	},
 	"repository": {
 		"type": "git",
