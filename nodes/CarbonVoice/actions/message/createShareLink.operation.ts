@@ -29,7 +29,7 @@ export const description: INodeProperties[] = [
 		options: [
 			{ name: 'Public (Anyone with the Link)', value: 'public' },
 			{
-				name: 'Specified (Limited to Certain Users/workspaces/conversations)',
+				name: 'Specified (Limited to Certain Users/Workspaces/Conversations)',
 				value: 'specified',
 			},
 		],
