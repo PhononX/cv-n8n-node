@@ -1,6 +1,6 @@
 {
 	"name": "@carbonvoice/n8n-nodes-carbonvoice",
-	"version": "0.1.8",
+	"version": "0.1.9",
 	"publishConfig": {
 		"access": "public"
 	},
