@@ -1,4 +1,5 @@
 import {
+	NodeApiError,
 	NodeConnectionTypes,
 	NodeOperationError,
 	type IDataObject,
@@ -7,6 +8,7 @@ import {
 	type INodeTypeDescription,
 	type IWebhookFunctions,
 	type IWebhookResponseData,
+	type JsonObject,
 } from 'n8n-workflow';
 
 import {
@@ -139,8 +141,8 @@ export class CarbonVoiceTrigger implements INodeType {
 						'DELETE',
 						`/apps/${clientId}/unsubscribe/${subscriptionId}`,
 					);
-				} catch {
-					return false;
+				} catch (error) {
+					throw new NodeApiError(this.getNode(), error as JsonObject);
 				}
 
 				delete webhookData.subscriptionId;
